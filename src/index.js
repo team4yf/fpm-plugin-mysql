@@ -22,8 +22,14 @@ export default {
       let M = Promise.promisifyAll(DBM(mysqlOptions))
 
       M.init = async (dir) =>{
+        // if db.lock exists reject
         // Read Sql Scripts Content
-
+        const lockfilePath = path.join(fpm.get('CWD'), 'db.lock')
+        if(fs.existsSync(lockfilePath)){
+          return new Promise((rs, rj) => {
+            rj('db.lock exists, it seems like your db is installed! If you wanna execute the scripts, Delete The db.lock File In your Project')
+          }) 
+        }
         let files = await readdir(dir)
         _.remove(files, (f) => {
           return !_.endsWith(f, '.sql')
@@ -54,6 +60,7 @@ export default {
                 }else{
                   atom.commit(() => {
                     console.log('All Scripts Done!')
+                    fs.createWriteStream(lockfilePath)
                     rs(1)
                   })
                 }

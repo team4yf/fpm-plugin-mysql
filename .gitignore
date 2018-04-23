@@ -21,3 +21,4 @@ uploads/*.zip
 uploads/*.json
 
 key.js
+db.lock

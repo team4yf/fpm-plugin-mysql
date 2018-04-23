@@ -1,3 +1,4 @@
 src/
 dev/
 sql/
+db.lock

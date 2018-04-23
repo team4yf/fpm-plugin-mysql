@@ -1,3 +1,9 @@
+## 1.0.6(2018-04-23)
+
+Feature
+  Add `db.lock` after `init()` execute success!
+    Do nothing if `db.lock` exists
+
 ## 1.0.4(2018-04-23)
 
 Feature

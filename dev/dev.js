@@ -17,5 +17,8 @@ app.addBizModules(biz);
 app.runAction('INIT', app)
 
 app.M.init('sql')
+.catch(e => {
+	console.log(e)
+})
 
 app.run()
