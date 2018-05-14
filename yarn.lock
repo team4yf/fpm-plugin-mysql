@@ -3268,9 +3268,9 @@ yf-fpm-client-nodejs@^1.0.11:
     moment "^2.18.1"
     node-fetch "^1.6.3"
 
-yf-fpm-dbm@^2.0.6:
-  version "2.0.6"
-  resolved "https://registry.yarnpkg.com/yf-fpm-dbm/-/yf-fpm-dbm-2.0.6.tgz#6782a1ce34994e35580933c36ac29a70ed67aa0c"
+yf-fpm-dbm@^2.0.7:
+  version "2.0.7"
+  resolved "https://registry.yarnpkg.com/yf-fpm-dbm/-/yf-fpm-dbm-2.0.7.tgz#16f8eb466e363e82dc500374cf23713b6195621a"
   dependencies:
     async "^2.1.5"
     lodash "^4.15.0"

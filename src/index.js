@@ -17,7 +17,8 @@ export default {
         "database": "dbadmin",
         "username": "dbadmin",
         "password": "741235896",
-        "showSql": true
+        "showSql": true,
+        "logger": fpm.logger
       }, c.mysql || {})
       let M = Promise.promisifyAll(DBM(mysqlOptions))
 

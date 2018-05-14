@@ -1,3 +1,7 @@
+## 1.0.8(2018-05-14)
+
+Update yf-fast-dbm@2.0.7
+
 ## 1.0.7(2018-04-24)
 
 Add npmignore `views/`
