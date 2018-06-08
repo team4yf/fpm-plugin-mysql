@@ -1,11 +1,12 @@
 'use strict';
 import { Fpm, Biz } from 'yf-fpm-server'
 import plugin from '../src'
+import path from 'path'
 let app = new Fpm()
-plugin.bind(app)
+let M = plugin.bind(app)
 let biz = new Biz('0.0.1');
 biz.addSubModules('test',{
-	foo:async function(args){
+	foo: async (args) => {
 		return new Promise( (resolve, reject) => {
 			reject({errno: -3001});
 		});
@@ -13,12 +14,8 @@ biz.addSubModules('test',{
 })
 app.addBizModules(biz);
 
-// this plugin should run when INIT , but we cant run it in Dev Mode, so We should Run It Manually
 app.runAction('INIT', app)
 
-app.M.init('sql')
-.catch(e => {
-	console.log(e)
+app.run().then(fpm=> {
+	M.init(path.join(fpm.get('CWD'), 'sql'))
 })
-
-app.run()

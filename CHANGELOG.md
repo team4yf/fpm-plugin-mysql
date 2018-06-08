@@ -1,3 +1,9 @@
+## 1.1.0(2018-06-08)
+Add Docker-Compose file
+Return M In `Bind()` Method
+Add Some Test Script
+
+
 ## 1.0.8(2018-05-14)
 
 Update yf-fast-dbm@2.0.7

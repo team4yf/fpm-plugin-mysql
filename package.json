@@ -1,13 +1,15 @@
 {
   "name": "fpm-plugin-mysql",
-  "version": "1.0.8",
+  "version": "1.1.0",
   "description": "",
   "main": "lib/index.js",
   "scripts": {
     "compile": "./node_modules/.bin/babel -d lib/ src/",
-    "prepublish": "npm run compile",
-    "dev": "./node_modules/.bin/nodemon dev/dev.babel.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "prepublishOnly": "npm run compile",
+    "docker": "docker-compose -f docker-compose.dev.yml up --build -d",
+    "dev": "yarn run docker && ./node_modules/.bin/nodemon dev/dev.babel.js",
+    "test": "./node_modules/.bin/mocha test/*.test.js",
+    "docker:clean": "./DockerClean.bat"
   },
   "author": "",
   "license": "ISC",
@@ -22,14 +24,13 @@
     "babel-core": "^6.14.0",
     "babel-plugin-transform-runtime": "^6.0.0",
     "babel-polyfill": "^6.13.0",
-    "babel-preset-es2015": "^6.14.0",
-    "babel-preset-stage-2": "^6.13.0",
+    "babel-preset-env": "^1.7.0",
     "babel-register": "^6.14.0",
     "babel-runtime": "^6.0.0",
     "chai": "^3.5.0",
     "mocha": "^3.2.0",
     "nodemon": "^1.11.0",
-    "yf-fpm-client-nodejs": "^1.0.11",
-    "yf-fpm-server": "^2.2.21"
+    "yf-fpm-client-js": "^1.0.2",
+    "yf-fpm-server": "^2.4.11"
   }
 }

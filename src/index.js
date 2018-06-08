@@ -10,70 +10,82 @@ const readFile = Promise.promisify(fs.readFile)
 
 export default {
   bind: (fpm) => {
-    fpm.registerAction('INIT', () => {
-      const c = fpm.getConfig()
-      let mysqlOptions = _.assign({
-        "host": "localhost",
-        "database": "dbadmin",
-        "username": "dbadmin",
-        "password": "741235896",
-        "showSql": true,
-        "logger": fpm.logger
-      }, c.mysql || {})
-      let M = Promise.promisifyAll(DBM(mysqlOptions))
+    const c = fpm.getConfig('mysql')
+    let mysqlOptions = _.assign({
+      "host": "localhost",
+      "port": "3306",
+      "database": "fpm",
+      "username": "root",
+      "password": "root",
+      "showSql": true,
+      "logger": fpm.logger
+    }, c || {})
+    let M = Promise.promisifyAll(DBM(mysqlOptions))
 
-      M.init = async (dir) =>{
-        // if db.lock exists reject
-        // Read Sql Scripts Content
-        const lockfilePath = path.join(fpm.get('CWD'), 'db.lock')
-        if(fs.existsSync(lockfilePath)){
-          return new Promise((rs, rj) => {
-            rj('db.lock exists, it seems like your db is installed! If you wanna execute the scripts, Delete The db.lock File In your Project')
-          }) 
-        }
-        let files = await readdir(dir)
-        _.remove(files, (f) => {
-          return !_.endsWith(f, '.sql')
-        })
-        console.log('Scripts: ', files)
-        let sqlArr = []
-        const len = files.length
-        for(let i = 0; i< len; i++){
-          let file = files[i]
-          let sql = await readFile(path.join(dir, file))
-          sql = sql.toString()
-          
-          sql = sql.split(';')
-          sqlArr = _.concat(sqlArr, sql)
-        }
-        _.remove(sqlArr, (n) => { return n == ''})
-
+    M.init = async (dir) =>{
+      // if db.lock exists reject
+      // Read Sql Scripts Content
+      const lockfilePath = path.join(fpm.get('CWD'), 'db.lock')
+      if(fs.existsSync(lockfilePath)){
         return new Promise((rs, rj) => {
-          M.transationAsync()
-            .then((atom) => {
-              eachSeries(sqlArr, (sql, callback) =>{
-                atom.command({sql}, callback)
-              }, 
-              (e, results) => {
-                if(e){
-                  atom.rollback()
-                  rj(e)
-                }else{
-                  atom.commit(() => {
-                    console.log('All Scripts Done!')
-                    fs.createWriteStream(lockfilePath)
-                    rs(1)
-                  })
-                }
-              })
-            })
-            .catch(e => {
-              rj(e)
+          rj('db.lock exists, it seems like your db is installed! If you wanna execute the scripts, Delete The db.lock File In your Project')
+        }) 
+      }
+      let files = await readdir(dir)
+      _.remove(files, (f) => {
+        return !_.endsWith(f, '.sql')
+      })
+      console.log('Scripts: ', files)
+      let sqlArr = []
+      const len = files.length
+      for(let i = 0; i< len; i++){
+        let file = files[i]
+        let sql = await readFile(path.join(dir, file))
+        sql = sql.toString()
+        
+        sql = sql.split(';')
+        sqlArr = _.concat(sqlArr, sql)
+      }
+      _.remove(sqlArr, (n) => { return n == ''})
+
+      return new Promise((rs, rj) => {
+        M.transationAsync()
+          .then((atom) => {
+            eachSeries(sqlArr, (sql, callback) =>{
+              atom.command({sql}, callback)
+            }, 
+            (e, results) => {
+              if(e){
+                atom.rollback()
+                rj(e)
+              }else{
+                atom.commit(() => {
+                  console.log('All Scripts Done!')
+                  fs.createWriteStream(lockfilePath)
+                  rs(1)
+                })
+              }
             })
           })
-      }
+          .catch(e => {
+            rj(e)
+          })
+        })
+    }
 
-      fpm.M = M
+    fpm.M = M
+    
+    const functions = {}
+    _.map(['find', 'first', 'create', 'update', 'remove', 'clear', 'findAndCount'], (fnName) => {
+        functions[fnName] = async (args) =>{
+            return await M[fnName + 'Async'](args)
+        } 
     })
+    fpm.registerAction('BEFORE_SERVER_START', () => {
+      
+      fpm.extendModule('common', functions)
+    })
+
+    return M
   }
 }
