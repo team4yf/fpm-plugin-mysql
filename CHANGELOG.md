@@ -1,3 +1,6 @@
+## 1.1.1(2018-06-12)
+Add `count` & `get` method for biz `common`
+
 ## 1.1.0(2018-06-08)
 Add Docker-Compose file
 Return M In `Bind()` Method

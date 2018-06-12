@@ -76,7 +76,7 @@ export default {
     fpm.M = M
     
     const functions = {}
-    _.map(['find', 'first', 'create', 'update', 'remove', 'clear', 'findAndCount'], (fnName) => {
+    _.map(['find', 'first', 'create', 'update', 'remove', 'clear', 'get', 'count', 'findAndCount'], (fnName) => {
         functions[fnName] = async (args) =>{
             return await M[fnName + 'Async'](args)
         } 
