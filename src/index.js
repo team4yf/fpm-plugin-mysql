@@ -35,7 +35,7 @@ export default {
       _.remove(files, (f) => {
         return !_.endsWith(f, '.sql')
       })
-      console.log('Scripts: ', files)
+      fpm.logger.log('Scripts: ', files)
       let sqlArr = []
       const len = files.length
       for(let i = 0; i< len; i++){
@@ -46,7 +46,7 @@ export default {
         sql = sql.split(';')
         sqlArr = _.concat(sqlArr, sql)
       }
-      _.remove(sqlArr, (n) => { return n == ''})
+      _.remove(sqlArr, (n) => { return n == '' || n == '\n' })
 
       return new Promise((rs, rj) => {
         M.transationAsync()
@@ -54,7 +54,7 @@ export default {
             eachSeries(sqlArr, (sql, callback) =>{
               atom.command({sql}, callback)
             }, 
-            (e, results) => {
+            (e) => {
               if(e){
                 atom.rollback()
                 rj(e)

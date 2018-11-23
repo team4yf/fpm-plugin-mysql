@@ -26,7 +26,7 @@
 
 ### Usage
 ```bash
-$ yarn add fpm-plugin-mysql
+$ npm i fpm-plugin-mysql --save
 ```
 
 ### Config In config.json

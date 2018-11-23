@@ -1,13 +1,13 @@
 {
   "name": "fpm-plugin-mysql",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "",
   "main": "lib/index.js",
   "scripts": {
     "compile": "./node_modules/.bin/babel -d lib/ src/",
     "prepublishOnly": "npm run compile",
     "docker": "docker-compose -f docker-compose.dev.yml up --build -d",
-    "dev": "yarn run docker && ./node_modules/.bin/nodemon dev/dev.babel.js",
+    "dev": "npm run docker && ./node_modules/.bin/nodemon dev/dev.babel.js",
     "test": "./node_modules/.bin/mocha test/*.test.js",
     "docker:clean": "./DockerClean.bat"
   },
