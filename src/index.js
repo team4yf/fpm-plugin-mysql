@@ -27,9 +27,7 @@ export default {
       // Read Sql Scripts Content
       const lockfilePath = path.join(fpm.get('CWD'), 'db.lock')
       if(fs.existsSync(lockfilePath)){
-        return new Promise((rs, rj) => {
-          rj('db.lock exists, it seems like your db is installed! If you wanna execute the scripts, Delete The db.lock File In your Project')
-        }) 
+        return Promise.reject(new Error('db.lock exists, it seems like your db is installed! If you wanna execute the scripts, Delete The db.lock File In your Project'));
       }
       let files = await readdir(dir)
       _.remove(files, (f) => {

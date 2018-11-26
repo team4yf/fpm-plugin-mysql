@@ -1,3 +1,20 @@
+## 1.1.4(2018-11-26)
+Fix Warning:
+
+- `(node:28524) Warning: a promise was rejected with a non-error: [object Object]`
+
+  The reason [http://bluebirdjs.com/docs/warning-explanations.html#warning-a-promise-was-rejected-with-a-non-error](http://bluebirdjs.com/docs/warning-explanations.html#warning-a-promise-was-rejected-with-a-non-error)
+
+  So, we do the change to fix the warning:
+
+  ```javascript
+  // before
+  Promise.reject('db.lock exists, it seems like your db is installed! If you wanna execute the scripts, Delete The db.lock File In your Project');
+
+  // after, add new Error() to wrap the error stack
+  Promise.reject(new Error('db.lock exists, it seems like your db is installed! If you wanna execute the scripts, Delete The db.lock File In your Project'));
+  ```
+
 ## 1.1.1(2018-06-12)
 Add `count` & `get` method for biz `common`
 
