@@ -1,9 +1,11 @@
 import _ from 'lodash'
 import Promise from 'bluebird'
 import DBM from 'yf-fpm-dbm'
-import fs from 'fs'
+import fs, { readFileSync } from 'fs'
 import path from 'path'
 import eachSeries from 'async/eachSeries'
+import crypto from 'crypto';
+import assert from 'assert';
 
 const readdir = Promise.promisify(fs.readdir)
 const readFile = Promise.promisify(fs.readFile)
@@ -22,6 +24,7 @@ export default {
     }, c || {})
     let M = Promise.promisifyAll(DBM(mysqlOptions));
 
+    const lockfilePath = path.join(fpm.get('CWD'), 'db.lock');
 
     const concatSqls = sqlStr => {
       let sqlArr = [];
@@ -31,6 +34,20 @@ export default {
       _.remove(sqlArr, (n) => { return n == '' || n == '\n' })
       return sqlArr;
     }
+
+    const readFileMd5 = (url) =>{
+      return new Promise((reslove) => {
+        let md5sum = crypto.createHash('md5');
+        let stream = fs.createReadStream(url);
+        stream.on('data', function(chunk) {
+          md5sum.update(chunk);
+        });
+        stream.on('end', function() {
+          let fileMd5 = md5sum.digest('hex');
+          reslove(fileMd5);
+        })
+    })
+}
 
     M.runFile = async filepath => {
       if(!fs.existsSync(filepath)){
@@ -67,20 +84,14 @@ export default {
 
     }
 
-    M.runDir = async dir => {
-      if(!fs.existsSync(dir)){
-        return Promise.reject(new Error(`SQL File Directory: ${ dir } Not Exists`));
-      }
-      let files = await readdir(dir)
-      _.remove(files, (f) => {
-        return !_.endsWith(f, '.sql')
-      })
 
+
+    M.executeFiles = async files => {
       let sqlArr = []
       const len = files.length
       for(let i = 0; i< len; i++){
         let file = files[i]
-        let sql = await readFile(path.join(dir, file))
+        let sql = await readFile(file.path)
         sql = sql.toString()
         const sqls = concatSqls(sql);
         sqlArr = _.concat(sqlArr, sqls)
@@ -98,7 +109,7 @@ export default {
                 rj(e)
               }else{
                 atom.commit(() => {
-                  rs(1)
+                  rs(files)
                 })
               }
             })
@@ -110,18 +121,85 @@ export default {
 
     } 
 
-    M.init = async (dir) =>{
-      // if db.lock exists reject
-      // Read Sql Scripts Content
-      const lockfilePath = path.join(fpm.get('CWD'), 'db.lock')
+    const getLockInfo = () => {
       if(fs.existsSync(lockfilePath)){
-        return Promise.reject(new Error('db.lock exists, it seems like your db is installed! If you wanna execute the scripts, Delete The db.lock File In your Project'));
+        const content = readFileSync(lockfilePath);
+        try {
+          return JSON.parse(content.toString());
+        } catch (error) {
+          return {}
+        }
       }
+      return {};
+    }
+
+    const saveLockInfo = info => {
+      const ws = fs.createWriteStream(lockfilePath);
+      ws.write(JSON.stringify(info));
+      ws.end();
+    }
+
+    const compareHash = (info, file, hash) => {
+      if(!_.has(info, file)){
+        return false;
+      }
+      return info[file].hash == hash;
+    }
+
+    M.install = async filepath => {
       try {
-        await M.runDir(dir);
-        console.log('All Scripts Done!');
-        fs.createWriteStream(lockfilePath);
-        return 1;
+        // check file/dir exists
+        assert.ok(fs.existsSync(filepath), `The File or Directory: ${ filepath } Not Exists`)
+        const stats = fs.statSync(filepath);
+        let todoExecutedSqlFiles = [];
+        // get lock info
+        const lockInfo = getLockInfo();
+        if(stats.isFile()){
+          const hash = await readFileMd5(filepath);
+          const fileName = filepath.split('/').pop();
+          if(compareHash(lockInfo, fileName, hash)){
+            // nothing to do
+            return 0;
+          }
+          todoExecutedSqlFiles.push({ file: fileName, path: filepath, hash });
+        }else{
+          // get files
+          const sqlFiles = await readdir(filepath)
+          _.remove(sqlFiles, (f) => {
+            return !_.endsWith(f, '.sql')
+          })
+          const sqlFilesLength = sqlFiles.length;
+          const sqlFilesHash = [];
+          
+          for(let i = 0; i< sqlFilesLength; i++){
+            const file = sqlFiles[i];
+            const realpath = path.join(filepath, file);
+            const hash = await readFileMd5(realpath);
+            sqlFilesHash.push({ file, hash, path: realpath });
+          }
+
+          _.remove(sqlFilesHash, sql => {
+            return compareHash(lockInfo, sql.file, sql.hash);
+          })
+          todoExecutedSqlFiles = _.concat(todoExecutedSqlFiles, sqlFilesHash);          
+        }
+        const result = await M.executeFiles(todoExecutedSqlFiles);
+        const NOW = _.now();
+        _.map(result, item => {
+          lockInfo[item.file] = _.assign(item, { executeAt: NOW})
+        })
+        saveLockInfo(lockInfo);
+        return 1
+      } catch (error) {
+        return Promise.reject(error.toString());
+      }
+
+      //
+    }
+
+    M.init = async (dir) =>{
+      try {
+        return await M.install(dir);
       } catch (error) {
         return Promise.reject(error);
       }
@@ -132,7 +210,7 @@ export default {
     const functions = {}
     _.map(['find', 'first', 'create', 'update', 'remove', 'clear', 'get', 'count', 'findAndCount'], (fnName) => {
         functions[fnName] = async (args) =>{
-            return await M[fnName + 'Async'](args)
+          return await M[fnName + 'Async'](args)
         } 
     })
     fpm.registerAction('BEFORE_SERVER_START', () => {
