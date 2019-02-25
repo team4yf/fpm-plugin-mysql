@@ -18,4 +18,15 @@ app.runAction('INIT', app)
 
 app.run().then(fpm=> {
 	M.init(path.join(fpm.get('CWD'), 'sql'))
+		.catch(e => {
+			console.error(e.toString())
+		})
+	// M.runFile(path.join(fpm.get('CWD'), 'sql', 'test.sql'))
+	// 	.catch(e => {
+	// 		console.error(e)
+	// 	});
+	// M.runDir(path.join(fpm.get('CWD'), 'sql'))
+	// 	.catch(e => {
+	// 		console.error(e)
+	// 	});
 })

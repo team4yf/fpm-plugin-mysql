@@ -1,6 +1,6 @@
 {
   "name": "fpm-plugin-mysql",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "",
   "main": "lib/index.js",
   "scripts": {
@@ -9,7 +9,7 @@
     "docker": "docker-compose -f docker-compose.dev.yml up --build -d",
     "dev": "npm run docker && ./node_modules/.bin/nodemon dev/dev.babel.js",
     "test": "./node_modules/.bin/mocha test/*.test.js",
-    "docker:clean": "./DockerClean.bat"
+    "docker:clean": "docker-compose -f docker-compose.dev.yml down"
   },
   "author": "",
   "license": "ISC",
@@ -27,10 +27,9 @@
     "babel-preset-env": "^1.7.0",
     "babel-register": "^6.14.0",
     "babel-runtime": "^6.0.0",
-    "chai": "^3.5.0",
+    "fpmc-jssdk": "^1.0.4",
     "mocha": "^3.2.0",
     "nodemon": "^1.11.0",
-    "yf-fpm-client-js": "^1.0.2",
-    "yf-fpm-server": "^2.4.11"
+    "yf-fpm-server": "^2.5.0"
   }
 }

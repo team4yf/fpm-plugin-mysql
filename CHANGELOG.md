@@ -1,3 +1,15 @@
+## 1.1.5(2010-03-26)
+Feature:
+
+- Add `runFile(filepath)`
+  
+  For run single sql file
+
+- Add `runDir(dir)`
+
+  For run all sql files in the directory.
+
+  
 ## 1.1.4(2018-11-26)
 Fix Warning:
 

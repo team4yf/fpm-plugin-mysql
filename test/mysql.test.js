@@ -1,12 +1,12 @@
-var should = require("chai").should();
-var YF = require("yf-fpm-client-js").default;
-YF.init({ appkey:'123123', masterKey:'123123', domain: 'http://localhost:9999' });
+const { init, Func, DBQuery } = require("fpmc-jssdk");
+const assert = require('assert');
+init({ appkey:'123123', masterKey:'123123', endpoint: 'http://localhost:9999/api' });
 
 
 describe('DB', function(){
 
   it('Find A', function(done){
-    var query = new YF.Query('area');
+    var query = new DBQuery('area');
     query.page(1,10);
     query.findAndCount()
       .then(function(data){
