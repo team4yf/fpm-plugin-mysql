@@ -1,3 +1,11 @@
+## 1.2.0(2010-03-26)
+Change:
+- Remove `runFile` & `runDir`
+- Add `install(path)` for install file/dir
+  - compare the sqlfile md5 hash code, do not run the sqlfile if hash code is the same!
+
+- `init` == `install`
+
 ## 1.1.5(2010-03-26)
 Feature:
 

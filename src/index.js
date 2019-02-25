@@ -10,6 +10,29 @@ import assert from 'assert';
 const readdir = Promise.promisify(fs.readdir)
 const readFile = Promise.promisify(fs.readFile)
 
+const concatSqls = sqlStr => {
+  let sqlArr = [];
+  let sql = sqlStr.split(';');
+  sqlArr = _.concat(sqlArr, sql);
+  sqlArr = _.map(sqlArr, _.trim);
+  _.remove(sqlArr, (n) => { return n == '' || n == '\n' })
+  return sqlArr;
+}
+
+const readFileMd5 = (url) =>{
+  return new Promise((reslove) => {
+    let md5sum = crypto.createHash('md5');
+    let stream = fs.createReadStream(url);
+    stream.on('data', function(chunk) {
+      md5sum.update(chunk);
+    });
+    stream.on('end', function() {
+      let fileMd5 = md5sum.digest('hex');
+      reslove(fileMd5);
+    })
+  })
+}
+
 export default {
   bind: (fpm) => {
     const c = fpm.getConfig('mysql')
@@ -25,66 +48,6 @@ export default {
     let M = Promise.promisifyAll(DBM(mysqlOptions));
 
     const lockfilePath = path.join(fpm.get('CWD'), 'db.lock');
-
-    const concatSqls = sqlStr => {
-      let sqlArr = [];
-      let sql = sqlStr.split(';');
-      sqlArr = _.concat(sqlArr, sql);
-      sqlArr = _.map(sqlArr, _.trim);
-      _.remove(sqlArr, (n) => { return n == '' || n == '\n' })
-      return sqlArr;
-    }
-
-    const readFileMd5 = (url) =>{
-      return new Promise((reslove) => {
-        let md5sum = crypto.createHash('md5');
-        let stream = fs.createReadStream(url);
-        stream.on('data', function(chunk) {
-          md5sum.update(chunk);
-        });
-        stream.on('end', function() {
-          let fileMd5 = md5sum.digest('hex');
-          reslove(fileMd5);
-        })
-    })
-}
-
-    M.runFile = async filepath => {
-      if(!fs.existsSync(filepath)){
-        return Promise.reject(new Error(`SQL File: ${ filepath } Not Exists`));
-      }
-      if(!_.endsWith(filepath, '.sql')){
-        return Promise.reject(new Error(`The File: ${ filepath } Should Be .sql`));
-      }
-
-      let sql = await readFile(filepath);
-      sql = sql.toString();
-      const sqlArr = concatSqls(sql);
-      return new Promise((rs, rj) => {
-        M.transationAsync()
-          .then((atom) => {
-            eachSeries(sqlArr, (sql, callback) =>{
-              atom.command({sql}, callback)
-            }, 
-            (e) => {
-              if(e){
-                atom.rollback()
-                rj(e)
-              }else{
-                atom.commit(() => {
-                  rs(1)
-                })
-              }
-            })
-          })
-          .catch(e => {
-            rj(e)
-          })
-        })
-
-    }
-
-
 
     M.executeFiles = async files => {
       let sqlArr = []
