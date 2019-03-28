@@ -1,13 +1,11 @@
 {
   "name": "fpm-plugin-mysql",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "",
-  "main": "lib/index.js",
+  "main": "src/index.js",
   "scripts": {
-    "compile": "./node_modules/.bin/babel -d lib/ src/",
-    "prepublishOnly": "npm run compile",
     "docker": "docker-compose -f docker-compose.dev.yml up --build -d",
-    "dev": "npm run docker && ./node_modules/.bin/nodemon dev/dev.babel.js",
+    "dev": "npm run docker && ./node_modules/.bin/nodemon dev/dev.js",
     "test": "./node_modules/.bin/mocha test/*.test.js",
     "docker:clean": "docker-compose -f docker-compose.dev.yml down"
   },
@@ -16,20 +14,15 @@
   "dependencies": {
     "async": "^2.6.0",
     "bluebird": "^3.4.7",
+    "debug": "^4.1.1",
     "lodash": "^4.17.4",
     "yf-fpm-dbm": "^2.0.7"
   },
   "devDependencies": {
-    "babel-cli": "^6.22.2",
-    "babel-core": "^6.14.0",
-    "babel-plugin-transform-runtime": "^6.0.0",
-    "babel-polyfill": "^6.13.0",
-    "babel-preset-env": "^1.7.0",
-    "babel-register": "^6.14.0",
     "babel-runtime": "^6.0.0",
-    "fpmc-jssdk": "^1.0.4",
+    "fpmc-jssdk": "^1.0.7",
     "mocha": "^3.2.0",
     "nodemon": "^1.11.0",
-    "yf-fpm-server": "^2.5.0"
+    "yf-fpm-server": "^2.5.3"
   }
 }

@@ -1,11 +1,12 @@
-import _ from 'lodash'
-import Promise from 'bluebird'
-import DBM from 'yf-fpm-dbm'
-import fs, { readFileSync } from 'fs'
-import path from 'path'
-import eachSeries from 'async/eachSeries'
-import crypto from 'crypto';
-import assert from 'assert';
+const _ = require('lodash');
+const Promise = require('bluebird');
+const DBM = require('yf-fpm-dbm');
+const fs = require('fs');
+const path = require('path');
+const eachSeries = require('async/eachSeries');
+const crypto = require('crypto');
+const assert = require('assert');
+const debug = require('debug')('fpm-plugin-mysql');
 
 const readdir = Promise.promisify(fs.readdir)
 const readFile = Promise.promisify(fs.readFile)
@@ -33,10 +34,10 @@ const readFileMd5 = (url) =>{
   })
 }
 
-export default {
+module.exports = {
   bind: (fpm) => {
     const c = fpm.getConfig('mysql')
-    let mysqlOptions = _.assign({
+    const mysqlOptions = _.assign({
       "host": "localhost",
       "port": "3306",
       "database": "fpm",
@@ -45,9 +46,15 @@ export default {
       "showSql": true,
       "logger": fpm.logger
     }, c || {})
-    let M = Promise.promisifyAll(DBM(mysqlOptions));
+    debug('The mysql connection options: %O', mysqlOptions);
+    const M = Promise.promisifyAll(DBM(mysqlOptions));
 
     const lockfilePath = path.join(fpm.get('CWD'), 'db.lock');
+
+    // the falg of install function, the install function will not execute if it's false likely
+    let enableInstall = parseInt(fpm.getEnv('ENABLE_INSTALL_SQL', 1));
+    enableInstall = isNaN(enableInstall) ? 1: enableInstall;
+    debug('The mysql enable install flag: %o', enableInstall);
 
     M.executeFiles = async files => {
       let sqlArr = []
@@ -86,7 +93,7 @@ export default {
 
     const getLockInfo = () => {
       if(fs.existsSync(lockfilePath)){
-        const content = readFileSync(lockfilePath);
+        const content = fs.readFileSync(lockfilePath);
         try {
           return JSON.parse(content.toString());
         } catch (error) {
@@ -96,10 +103,16 @@ export default {
       return {};
     }
 
+    // WARNING: this may be the bug. stream.write() is not a sync function.
     const saveLockInfo = info => {
       const ws = fs.createWriteStream(lockfilePath);
-      ws.write(JSON.stringify(info));
-      ws.end();
+      return new Promise( (resolve, reject) => {
+        ws.write(JSON.stringify(info));
+        ws.end();
+
+        ws.on('error', (err) => { reject(err); });
+        ws.on('finish', () => { resolve(1); });
+      })
     }
 
     const compareHash = (info, file, hash) => {
@@ -109,8 +122,9 @@ export default {
       return info[file].hash == hash;
     }
 
-    M.install = async filepath => {
+    M.init = M.install = async filepath => {
       try {
+        assert(!!enableInstall, `The evn ENABLE_INSTALL_SQL might be 1, otherwise we cant run the sql scripts.`)
         // check file/dir exists
         assert.ok(fs.existsSync(filepath), `The File or Directory: ${ filepath } Not Exists`)
         const stats = fs.statSync(filepath);
@@ -151,21 +165,13 @@ export default {
         _.map(result, item => {
           lockInfo[item.file] = _.assign(item, { executeAt: NOW})
         })
-        saveLockInfo(lockInfo);
-        return 1
+        return await saveLockInfo(lockInfo);
       } catch (error) {
-        return Promise.reject(error.toString());
+        debug('Install error: %O', error)
+        return Promise.reject(error);
       }
 
       //
-    }
-
-    M.init = async (dir) =>{
-      try {
-        return await M.install(dir);
-      } catch (error) {
-        return Promise.reject(error);
-      }
     }
 
     fpm.M = M

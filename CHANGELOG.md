@@ -1,4 +1,12 @@
-## 1.2.0(2010-03-26)
+## 1.3.0(2019-03-28)
+Change: 
+- Remove `babel`
+- Add `Debug`
+- Add a env argument `ENABLE_INSTALL_SQL` , refuse the install function when it setted be `0`
+Fixbugs:
+- Run `install` many times, the `db.lock` rewrite by the last execution and drop the preview results.
+
+## 1.2.0(2019-03-26)
 Change:
 - Remove `runFile` & `runDir`
 - Add `install(path)` for install file/dir
@@ -6,7 +14,7 @@ Change:
 
 - `init` == `install`
 
-## 1.1.5(2010-03-26)
+## 1.1.5(2019-03-26)
 Feature:
 
 - Add `runFile(filepath)`

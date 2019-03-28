@@ -1,7 +1,8 @@
 'use strict';
-import { Fpm, Biz } from 'yf-fpm-server'
-import plugin from '../src'
-import path from 'path'
+const { Fpm, Biz } = require('yf-fpm-server');
+const plugin = require('../src');
+const path = require('path');
+
 let app = new Fpm()
 let M = plugin.bind(app)
 let biz = new Biz('0.0.1');
