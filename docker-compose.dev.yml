@@ -1,9 +1,9 @@
 version: '3'
 services:
-  phpmyadmin:
-    image: "phpmyadmin/phpmyadmin"
+  adminer:
+    image: "adminer"
     ports:
-      - "88:80"
+      - "88:8080"
     depends_on:
       - "db"
     networks: 

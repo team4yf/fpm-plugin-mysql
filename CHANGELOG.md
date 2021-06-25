@@ -1,3 +1,7 @@
+## 1.3.1(2021-06-25)
+Change:
+- Add `_migrate_` table for lock the migration.
+
 ## 1.3.0(2019-03-28)
 Change: 
 - Remove `babel`

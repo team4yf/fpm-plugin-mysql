@@ -43,14 +43,13 @@ module.exports = {
       "database": "fpm",
       "username": "root",
       "password": "root",
+      "migrate": "_migrate",
       "showSql": true,
       "logger": fpm.logger
     }, c || {})
-    debug('The mysql connection options: %O', mysqlOptions);
+    // debug('The mysql connection options: %O', mysqlOptions);
     const M = Promise.promisifyAll(DBM(mysqlOptions));
-
-    const lockfilePath = path.join(fpm.get('CWD'), 'db.lock');
-
+    
     // the falg of install function, the install function will not execute if it's false likely
     let enableInstall = parseInt(fpm.getEnv('ENABLE_INSTALL_SQL', 1));
     enableInstall = isNaN(enableInstall) ? 1: enableInstall;
@@ -91,28 +90,34 @@ module.exports = {
 
     } 
 
-    const getLockInfo = () => {
-      if(fs.existsSync(lockfilePath)){
-        const content = fs.readFileSync(lockfilePath);
-        try {
-          return JSON.parse(content.toString());
-        } catch (error) {
-          return {}
-        }
-      }
-      return {};
+    const getLockInfo = async () => {
+      const migrateTable = `CREATE TABLE IF NOT EXISTS ${mysqlOptions.migrate} (
+  id bigint(20) NOT NULL AUTO_INCREMENT,
+  createAt bigint(20) NOT NULL DEFAULT '0',
+  updateAt bigint(20) NOT NULL DEFAULT '0',
+  delflag tinyint(4) NOT NULL DEFAULT '0',
+  name varchar(200) NOT NULL,
+  hash varchar(200) NOT NULL,
+  PRIMARY KEY (id)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8;`;
+      await M.commandAsync({ sql: migrateTable });
+      const list = await M.findAsync({ table: mysqlOptions.migrate });
+      return _.keyBy(list, 'name');
     }
 
     // WARNING: this may be the bug. stream.write() is not a sync function.
-    const saveLockInfo = info => {
-      const ws = fs.createWriteStream(lockfilePath);
-      return new Promise( (resolve, reject) => {
-        ws.write(JSON.stringify(info));
-        ws.end();
-
-        ws.on('error', (err) => { reject(err); });
-        ws.on('finish', () => { resolve(1); });
-      })
+    const saveLockInfo = async info => {
+      const rows = _.map(info, x => {
+        return { name: x.file, hash: x.hash, createAt: x.executeAt, updateAt: x.executeAt };
+      });
+      if (_.isEmpty(rows)) {
+        return;
+      }
+      const result = await M.createAsync({
+        table: mysqlOptions.migrate,
+        row: rows,
+      });
+      return result;
     }
 
     const compareHash = (info, file, hash) => {
@@ -130,7 +135,8 @@ module.exports = {
         const stats = fs.statSync(filepath);
         let todoExecutedSqlFiles = [];
         // get lock info
-        const lockInfo = getLockInfo();
+        const lockInfo = await getLockInfo();
+        debug("LockInfo before: %O", lockInfo);
         if(stats.isFile()){
           const hash = await readFileMd5(filepath);
           const fileName = filepath.split('/').pop();
@@ -155,17 +161,17 @@ module.exports = {
             sqlFilesHash.push({ file, hash, path: realpath });
           }
 
-          _.remove(sqlFilesHash, sql => {
-            return compareHash(lockInfo, sql.file, sql.hash);
-          })
-          todoExecutedSqlFiles = _.concat(todoExecutedSqlFiles, sqlFilesHash);          
+          todoExecutedSqlFiles = _.concat(todoExecutedSqlFiles, _.filter(sqlFilesHash, sql => {
+            return !compareHash(lockInfo, sql.file, sql. hash);
+          }));          
         }
+        debug('todo sql: %O', todoExecutedSqlFiles);
         const result = await M.executeFiles(todoExecutedSqlFiles);
         const NOW = _.now();
         _.map(result, item => {
           lockInfo[item.file] = _.assign(item, { executeAt: NOW})
         })
-        return await saveLockInfo(lockInfo);
+        return await saveLockInfo(todoExecutedSqlFiles);
       } catch (error) {
         debug('Install error: %O', error)
         return Promise.reject(error);
