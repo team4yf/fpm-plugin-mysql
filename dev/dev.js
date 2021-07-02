@@ -24,7 +24,7 @@ app.run().then(fpm=> {
 	// 	})
 	M.install(path.join(fpm.get('CWD'), 'sql'))
 		.catch(e => {
-			console.error(e.toString())
+			console.error(e)
 		})
 	// M.install(path.join(fpm.get('CWD'), 'sql', 'test.sql'))
 	// .catch(e => {

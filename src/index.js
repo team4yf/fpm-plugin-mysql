@@ -40,9 +40,9 @@ module.exports = {
     const mysqlOptions = _.assign({
       "host": "localhost",
       "port": "3306",
-      "database": "fpm",
+      "database": "fpm_open_iot",
       "username": "root",
-      "password": "root",
+      "password": "741235896",
       "migrate": "_migrate",
       "showSql": true,
       "logger": fpm.logger
@@ -161,10 +161,11 @@ module.exports = {
             const hash = await readFileMd5(realpath);
             sqlFilesHash.push({ file, hash, path: realpath });
           }
-
+          debug('before: %O', sqlFilesHash)
           todoExecutedSqlFiles = _.concat(todoExecutedSqlFiles, _.filter(sqlFilesHash, sql => {
             return !compareHash(lockInfo, sql.file, sql.hash);
-          }));          
+          }));
+          debug('after: %O', todoExecutedSqlFiles)
         }
         debug('todo sql: %O', todoExecutedSqlFiles);
         const result = await M.executeFiles(todoExecutedSqlFiles);
