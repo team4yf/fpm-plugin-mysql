@@ -56,6 +56,7 @@ module.exports = {
     debug('The mysql enable install flag: %o', enableInstall);
 
     M.executeFiles = async files => {
+      files.sort( (x1, x2) => x2.name - x1.name);
       let sqlArr = []
       const len = files.length
       for(let i = 0; i< len; i++){
@@ -162,7 +163,7 @@ module.exports = {
           }
 
           todoExecutedSqlFiles = _.concat(todoExecutedSqlFiles, _.filter(sqlFilesHash, sql => {
-            return !compareHash(lockInfo, sql.file, sql. hash);
+            return !compareHash(lockInfo, sql.file, sql.hash);
           }));          
         }
         debug('todo sql: %O', todoExecutedSqlFiles);
