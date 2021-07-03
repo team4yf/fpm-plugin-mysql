@@ -40,9 +40,9 @@ module.exports = {
     const mysqlOptions = _.assign({
       "host": "localhost",
       "port": "3306",
-      "database": "fpm_open_iot",
+      "database": "fpm",
       "username": "root",
-      "password": "741235896",
+      "password": "root",
       "migrate": "_migrate",
       "showSql": true,
       "logger": fpm.logger
