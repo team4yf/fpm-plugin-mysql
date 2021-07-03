@@ -84,8 +84,8 @@ module.exports = {
   PRIMARY KEY (id)
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8;`;
       await M.commandAsync({ sql: migrateTable });
-      const list = await M.findAsync({ table: mysqlOptions.migrate });
-      return _.keyBy(list, 'name');
+      const list = await M.findAsync({ table: mysqlOptions.migrate, limit: 100000 });
+      return _.map(list, x => x.name);
     }
 
     // WARNING: this may be the bug. stream.write() is not a sync function.
@@ -115,10 +115,10 @@ module.exports = {
         debug("LockInfo before: %O", lockInfo);
         if(stats.isFile()){
           const fileName = filepath.split('/').pop();
-          if (_.has(lockInfo, fileName)) {
+          if (_.includes(lockInfo, fileName)) {
             return 0;
           }
-          todoExecutedSqlFiles.push({ file: fileName, path: filepath, hash });
+          todoExecutedSqlFiles.push({ file: fileName, path: filepath });
         }else{
           // get files
           const sqlFiles = await readdir(filepath)
@@ -134,7 +134,7 @@ module.exports = {
           }
           debug('before: %O', sqlFilesHash)
           todoExecutedSqlFiles = _.concat(todoExecutedSqlFiles, _.filter(sqlFilesHash, sql => {
-            return !_.has(lockInfo, sql.file);
+            return !_.includes(lockInfo, sql.file);
           }));
           debug('after: %O', todoExecutedSqlFiles)
         }
@@ -154,7 +154,6 @@ module.exports = {
     }
 
     fpm.M = M
-    
     const functions = {}
     _.map(['find', 'first', 'create', 'update', 'remove', 'clear', 'get', 'count', 'findAndCount'], (fnName) => {
         functions[fnName] = async (args) =>{
@@ -162,7 +161,6 @@ module.exports = {
         } 
     })
     fpm.registerAction('BEFORE_SERVER_START', () => {
-      
       fpm.extendModule('common', functions)
     })
 
