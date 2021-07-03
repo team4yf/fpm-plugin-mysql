@@ -20,20 +20,6 @@ const concatSqls = sqlStr => {
   return sqlArr;
 }
 
-const readFileMd5 = (url) =>{
-  return new Promise((reslove) => {
-    let md5sum = crypto.createHash('md5');
-    let stream = fs.createReadStream(url);
-    stream.on('data', function(chunk) {
-      md5sum.update(chunk);
-    });
-    stream.on('end', function() {
-      let fileMd5 = md5sum.digest('hex');
-      reslove(fileMd5);
-    })
-  })
-}
-
 module.exports = {
   bind: (fpm) => {
     const c = fpm.getConfig('mysql')
@@ -49,7 +35,6 @@ module.exports = {
     }, c || {})
     // debug('The mysql connection options: %O', mysqlOptions);
     const M = Promise.promisifyAll(DBM(mysqlOptions));
-    
     // the falg of install function, the install function will not execute if it's false likely
     let enableInstall = parseInt(fpm.getEnv('ENABLE_INSTALL_SQL', 1));
     enableInstall = isNaN(enableInstall) ? 1: enableInstall;
@@ -66,13 +51,12 @@ module.exports = {
         const sqls = concatSqls(sql);
         sqlArr = _.concat(sqlArr, sqls)
       }
-      
       return new Promise((rs, rj) => {
         M.transationAsync()
           .then((atom) => {
             eachSeries(sqlArr, (sql, callback) =>{
               atom.command({sql}, callback)
-            }, 
+            },
             (e) => {
               if(e){
                 atom.rollback()
@@ -88,8 +72,7 @@ module.exports = {
             rj(e)
           })
         })
-
-    } 
+    }
 
     const getLockInfo = async () => {
       const migrateTable = `CREATE TABLE IF NOT EXISTS ${mysqlOptions.migrate} (
@@ -98,7 +81,6 @@ module.exports = {
   updateAt bigint(20) NOT NULL DEFAULT '0',
   delflag tinyint(4) NOT NULL DEFAULT '0',
   name varchar(200) NOT NULL,
-  hash varchar(200) NOT NULL,
   PRIMARY KEY (id)
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8;`;
       await M.commandAsync({ sql: migrateTable });
@@ -109,7 +91,7 @@ module.exports = {
     // WARNING: this may be the bug. stream.write() is not a sync function.
     const saveLockInfo = async info => {
       const rows = _.map(info, x => {
-        return { name: x.file, hash: x.hash, createAt: x.executeAt, updateAt: x.executeAt };
+        return { name: x.file, createAt: x.executeAt, updateAt: x.executeAt };
       });
       if (_.isEmpty(rows)) {
         return;
@@ -119,13 +101,6 @@ module.exports = {
         row: rows,
       });
       return result;
-    }
-
-    const compareHash = (info, file, hash) => {
-      if(!_.has(info, file)){
-        return false;
-      }
-      return info[file].hash == hash;
     }
 
     M.init = M.install = async filepath => {
@@ -139,10 +114,8 @@ module.exports = {
         const lockInfo = await getLockInfo();
         debug("LockInfo before: %O", lockInfo);
         if(stats.isFile()){
-          const hash = await readFileMd5(filepath);
           const fileName = filepath.split('/').pop();
-          if(compareHash(lockInfo, fileName, hash)){
-            // nothing to do
+          if (_.has(lockInfo, fileName)) {
             return 0;
           }
           todoExecutedSqlFiles.push({ file: fileName, path: filepath, hash });
@@ -154,16 +127,14 @@ module.exports = {
           })
           const sqlFilesLength = sqlFiles.length;
           const sqlFilesHash = [];
-          
           for(let i = 0; i< sqlFilesLength; i++){
             const file = sqlFiles[i];
             const realpath = path.join(filepath, file);
-            const hash = await readFileMd5(realpath);
-            sqlFilesHash.push({ file, hash, path: realpath });
+            sqlFilesHash.push({ file, path: realpath });
           }
           debug('before: %O', sqlFilesHash)
           todoExecutedSqlFiles = _.concat(todoExecutedSqlFiles, _.filter(sqlFilesHash, sql => {
-            return !compareHash(lockInfo, sql.file, sql.hash);
+            return !_.has(lockInfo, sql.file);
           }));
           debug('after: %O', todoExecutedSqlFiles)
         }
